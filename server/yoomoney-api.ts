@@ -12,11 +12,11 @@ type YooMoneyPaymentResponse = z.infer<typeof yooMoneyPaymentResponseSchema>;
 
 // YooMoney API class to handle payment operations
 export class YooMoneyAPI {
-  private apiKey: string;
+  private walletNumber: string;
   private returnUrl: string;
 
-  constructor(apiKey: string, returnUrl: string) {
-    this.apiKey = apiKey;
+  constructor(walletNumber: string, returnUrl: string) {
+    this.walletNumber = walletNumber;
     this.returnUrl = returnUrl;
   }
 
@@ -36,19 +36,26 @@ export class YooMoneyAPI {
       // For the purpose of this demo, we'll simulate a successful API response
       // In production, replace with actual API call to YooMoney
       
-      // If API key is not provided, simulate success response
-      if (!this.apiKey) {
-        console.log('Warning: YooMoney API key not provided. Using mock response.');
+      // If wallet number is not provided, simulate success response
+      if (!this.walletNumber) {
+        console.log('Warning: YooMoney wallet number not provided. Using mock response.');
       }
       
       // Generate a unique payment ID
       const paymentId = `pay_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
       
+      // Create a direct payment URL with wallet number
+      // This uses YooMoney's quickpay form which doesn't require API integration
+      const encodedDescription = encodeURIComponent(description);
+      const paymentURL = this.walletNumber 
+        ? `https://yoomoney.ru/quickpay/button-widget?targets=${encodedDescription}&default-sum=${amount}&button-text=12&any-card-payment-type=on&button-size=m&button-color=orange&successURL=${encodeURIComponent(this.returnUrl)}&quickpay=small&account=${this.walletNumber}`
+        : `https://yoomoney.ru/checkout/payments/v2/contract?orderId=${paymentId}`;
+      
       // Simulate API response based on a successful request
       const response: YooMoneyPaymentResponse = {
         status: 'success',
         payment_id: paymentId,
-        payment_url: `https://yoomoney.ru/checkout/payments/v2/contract?orderId=${paymentId}`,
+        payment_url: paymentURL,
       };
       
       // Parse and validate response
@@ -96,6 +103,6 @@ export class YooMoneyAPI {
 
 // Create an instance of the YooMoney API
 export const yooMoneyAPI = new YooMoneyAPI(
-  process.env.YOOMONEY_API_KEY || '',
+  process.env.YOOMONEY_WALLET_NUMBER || '',
   process.env.RETURN_URL || 'http://localhost:5000/thank-you'
 );
