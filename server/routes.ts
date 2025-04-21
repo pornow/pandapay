@@ -32,7 +32,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // API endpoint to initiate a donation
   app.post("/api/donate/init", async (req: Request, res: Response) => {
     try {
-      // Validate amount
+      // Validate amount and payment method
       const amountValidation = donationAmountSchema.safeParse(req.body);
       if (!amountValidation.success) {
         return res.status(400).json({ 
@@ -40,31 +40,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      const { amount } = amountValidation.data;
+      const { amount, paymentMethod = "yoomoney" } = amountValidation.data;
+      let paymentId = "";
+      let paymentUrl = "";
+      let cryptoAddress = undefined;
       
-      // Create payment via YooMoney API
-      const paymentResponse = await yooMoneyAPI.createPayment(amount, "Донат через сайт");
-      
-      if (paymentResponse.status !== 'success' || !paymentResponse.payment_id || !paymentResponse.payment_url) {
-        return res.status(500).json({ 
-          message: paymentResponse.error || "Payment initialization failed" 
+      if (paymentMethod === "yoomoney") {
+        // Create payment via YooMoney API
+        const paymentResponse = await yooMoneyAPI.createPayment(amount, "Донат через сайт");
+        
+        if (paymentResponse.status !== 'success' || !paymentResponse.payment_id || !paymentResponse.payment_url) {
+          return res.status(500).json({ 
+            message: paymentResponse.error || "Payment initialization failed" 
+          });
+        }
+        
+        paymentId = paymentResponse.payment_id;
+        paymentUrl = paymentResponse.payment_url;
+      } else if (paymentMethod === "crypto") {
+        // Create payment via CryptoBot API
+        const paymentResponse = await cryptoBotAPI.createPayment(amount, "Донат через сайт");
+        
+        if (paymentResponse.status !== 'pending' || !paymentResponse.invoiceId) {
+          return res.status(500).json({ 
+            message: paymentResponse.error || "Crypto payment initialization failed" 
+          });
+        }
+        
+        paymentId = paymentResponse.invoiceId;
+        paymentUrl = paymentResponse.paymentUrl || "";
+        cryptoAddress = paymentResponse.cryptoAddress;
+      } else {
+        return res.status(400).json({ 
+          message: "Invalid payment method. Must be 'yoomoney' or 'crypto'." 
         });
       }
       
       // Save initial donation record
       await storage.createDonation({
         amount: amount * 100, // Convert to kopecks
-        paymentId: paymentResponse.payment_id,
+        paymentId: paymentId,
         source: "website",
         status: "pending",
         name: undefined,
-        message: undefined
+        message: undefined,
+        paymentMethod: paymentMethod,
+        cryptoAddress: cryptoAddress
       });
       
       // Return payment details to the client
       res.json({
-        paymentId: paymentResponse.payment_id,
-        paymentUrl: paymentResponse.payment_url
+        paymentId: paymentId,
+        paymentUrl: paymentUrl,
+        cryptoAddress: cryptoAddress
       });
     } catch (error) {
       console.error("Error initializing donation:", error);
