@@ -61,10 +61,13 @@ const DonationForm = () => {
     form.setValue("amount", amount);
   };
 
+  // State for payment method
+  const [paymentMethod, setPaymentMethod] = useState<"yoomoney" | "crypto">("yoomoney");
+
   // Initialize payment mutation
   const initPaymentMutation = useMutation({
-    mutationFn: async (amount: number) => {
-      const response = await apiRequest('POST', '/api/donate/init', { amount });
+    mutationFn: async (data: { amount: number, paymentMethod: "yoomoney" | "crypto" }) => {
+      const response = await apiRequest('POST', '/api/donate/init', data);
       return response.json();
     },
     onSuccess: (data) => {
@@ -113,8 +116,8 @@ const DonationForm = () => {
       return;
     }
     
-    // Initialize payment
-    initPaymentMutation.mutate(amount);
+    // Initialize payment with selected payment method
+    initPaymentMutation.mutate({ amount, paymentMethod });
   };
 
   // Process payment after submitting the form
@@ -223,6 +226,44 @@ const DonationForm = () => {
                   </div>
                 </div>
                 
+                <div className="mb-6">
+                  <p className="block text-sm font-medium text-gray-700 mb-2">
+                    Способ оплаты:
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("yoomoney")}
+                      className={`flex items-center justify-center py-3 px-4 rounded-lg text-center font-medium transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        paymentMethod === "yoomoney"
+                          ? "bg-primary/10 hover:bg-primary/15"
+                          : "bg-gray-100 hover:bg-primary/10"
+                      }`}
+                    >
+                      <img 
+                        src="https://yoomoney.ru/i/html-letters/yoomoney-icon.png" 
+                        alt="YooMoney" 
+                        className="h-5 w-5 mr-2" 
+                      />
+                      YooMoney
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("crypto")}
+                      className={`flex items-center justify-center py-3 px-4 rounded-lg text-center font-medium transition focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 ${
+                        paymentMethod === "crypto"
+                          ? "bg-primary/10 hover:bg-primary/15"
+                          : "bg-gray-100 hover:bg-primary/10"
+                      }`}
+                    >
+                      <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M23.6 12l-2.2-2.2-1.1-1.1-2.2-2.2-1.1-1.1L14.9 3l-1-1L12 0 9.1 3 7.9 4.1 5.7 6.4 4.5 7.5 2.3 9.8l-1 1L0 12l2.3 2.3 1.1 1.1 2.2 2.2 1.1 1.1 2.2 2.2 1 1.1.1.1.9.9 3 3 2.9-3 1.1-1.1 2.2-2.2 1.1-1.1 2.2-2.2 1.1-1.1.1-.1 1-.9L24 12h-.4zm-7.9 2.3L14.6 15l-2.3 2.3h-.6l-2.4-2.4-1.1-1.1L7 12.7l1.1-1.1 2.3-2.3L12 7.7l3.7 3.7 1.1 1.1-1.1 1.1 1.1 1.1-1.1-1.4z"/>
+                      </svg>
+                      Криптовалюта
+                    </button>
+                  </div>
+                </div>
+                
                 <Button 
                   className="w-full py-6"
                   onClick={handleContinueToPayment}
@@ -303,17 +344,33 @@ const DonationForm = () => {
                     
                     <div className="mt-6">
                       <div className="flex items-center mb-4">
-                        <div className="h-12 w-12 mr-3">
-                          <img 
-                            src="https://yoomoney.ru/i/html-letters/yoomoney-icon.png" 
-                            alt="YooMoney" 
-                            className="h-full w-full object-contain" 
-                          />
-                        </div>
-                        <div>
-                          <h4 className="font-medium">YooMoney</h4>
-                          <p className="text-sm text-gray-500">Оплата с помощью карты или кошелька</p>
-                        </div>
+                        {paymentMethod === "yoomoney" ? (
+                          <>
+                            <div className="h-12 w-12 mr-3">
+                              <img 
+                                src="https://yoomoney.ru/i/html-letters/yoomoney-icon.png" 
+                                alt="YooMoney" 
+                                className="h-full w-full object-contain" 
+                              />
+                            </div>
+                            <div>
+                              <h4 className="font-medium">YooMoney</h4>
+                              <p className="text-sm text-gray-500">Оплата с помощью карты или кошелька</p>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="h-12 w-12 mr-3 flex items-center justify-center">
+                              <svg className="h-8 w-8" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M23.6 12l-2.2-2.2-1.1-1.1-2.2-2.2-1.1-1.1L14.9 3l-1-1L12 0 9.1 3 7.9 4.1 5.7 6.4 4.5 7.5 2.3 9.8l-1 1L0 12l2.3 2.3 1.1 1.1 2.2 2.2 1.1 1.1 2.2 2.2 1 1.1.1.1.9.9 3 3 2.9-3 1.1-1.1 2.2-2.2 1.1-1.1 2.2-2.2 1.1-1.1.1-.1 1-.9L24 12h-.4zm-7.9 2.3L14.6 15l-2.3 2.3h-.6l-2.4-2.4-1.1-1.1L7 12.7l1.1-1.1 2.3-2.3L12 7.7l3.7 3.7 1.1 1.1-1.1 1.1 1.1 1.1-1.1-1.4z"/>
+                              </svg>
+                            </div>
+                            <div>
+                              <h4 className="font-medium">Криптовалюта</h4>
+                              <p className="text-sm text-gray-500">Оплата через @cryptobot</p>
+                            </div>
+                          </>
+                        )}
                       </div>
                       
                       <Button 

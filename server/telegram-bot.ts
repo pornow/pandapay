@@ -35,7 +35,7 @@ export class TelegramBotService {
     console.log('Starting Telegram bot...');
 
     // Handle the /start command
-    this.bot.onText(/\/start/, (msg) => {
+    this.bot.onText(/\/start/, (msg: TelegramBot.Message) => {
       const chatId = msg.chat.id;
       const message = 'Привет! Я бот для отправки донатов. Чем могу помочь?\n\n' +
                      'Используйте команду /donate чтобы отправить донат.';
@@ -44,13 +44,13 @@ export class TelegramBotService {
     });
 
     // Handle the /donate command
-    this.bot.onText(/\/donate/, (msg) => {
+    this.bot.onText(/\/donate/, (msg: TelegramBot.Message) => {
       const chatId = msg.chat.id;
       this.sendDonationOptions(chatId);
     });
 
     // Handle callback queries (button presses)
-    this.bot.on('callback_query', async (callbackQuery) => {
+    this.bot.on('callback_query', async (callbackQuery: TelegramBot.CallbackQuery) => {
       const chatId = callbackQuery.message?.chat.id;
       if (!chatId) return;
 
@@ -61,20 +61,46 @@ export class TelegramBotService {
         await this.handleAmountSelection(chatId, amount);
       } else if (data === 'custom_amount') {
         await this.requestCustomAmount(chatId);
+      } else if (data === 'payment_yoomoney') {
+        await this.handlePaymentMethodSelection(chatId, 'yoomoney');
+      } else if (data === 'payment_crypto') {
+        await this.handlePaymentMethodSelection(chatId, 'crypto');
+      } else if (data === 'comment_skip') {
+        await this.handleCommentInput(chatId, null);
+      } else if (data === 'confirm_payment') {
+        await this.processPayment(chatId);
+      } else if (data === 'cancel_payment') {
+        this.resetUserState(chatId);
+        await this.bot.sendMessage(chatId, 'Донат отменен. Для начала заново используйте команду /donate');
       }
     });
 
-    // Handle regular messages for custom amount input
-    this.bot.on('message', async (msg) => {
-      if (msg.text && /^\d+$/.test(msg.text) && msg.text !== '/start' && msg.text !== '/donate') {
-        const chatId = msg.chat.id;
-        const amount = parseInt(msg.text, 10);
-        
-        if (amount >= 10 && amount <= 100000) {
-          await this.handleAmountSelection(chatId, amount);
-        } else {
-          this.bot.sendMessage(chatId, 'Пожалуйста, введите сумму от 10₽ до 100,000₽.');
+    // Handle regular messages for custom amount input or comments
+    this.bot.on('message', async (msg: TelegramBot.Message) => {
+      if (!msg.text) return;
+      
+      const chatId = msg.chat.id;
+      const userState = this.userStates.get(chatId);
+      
+      // Command messages are handled separately
+      if (msg.text.startsWith('/')) return;
+      
+      // Handle based on current state
+      if (!userState || userState.step === 'amount') {
+        // Assume it's a custom amount input
+        if (/^\d+$/.test(msg.text)) {
+          const amount = parseInt(msg.text, 10);
+          
+          if (amount >= 10 && amount <= 100000) {
+            await this.handleAmountSelection(chatId, amount);
+          } else {
+            this.bot.sendMessage(chatId, 'Пожалуйста, введите сумму от 10₽ до 100,000₽.');
+          }
         }
+      } else if (userState.step === 'comment') {
+        // Handle comment input
+        const comment = msg.text.toLowerCase() === 'нет' ? null : msg.text;
+        await this.handleCommentInput(chatId, comment);
       }
     });
 

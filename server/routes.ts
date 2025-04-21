@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { z } from "zod";
 import { donationAmountSchema, donationInfoSchema } from "@shared/schema";
 import { yooMoneyAPI } from "./yoomoney-api";
+import { cryptoBotAPI } from "./cryptobot-api";
 import { telegramBot } from "./telegram-bot";
 
 export async function registerRoutes(app: Express): Promise<Server> {
