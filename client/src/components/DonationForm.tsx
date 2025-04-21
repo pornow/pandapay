@@ -369,6 +369,13 @@ const DonationForm = () => {
                               <h4 className="font-medium">YooMoney</h4>
                               <p className="text-sm text-gray-500">Оплата с помощью карты или кошелька</p>
                             </div>
+                            <div className="mt-3 w-full">
+                              <img 
+                                src="https://yoomoney.ru/i/html-letters/payment-methods.png" 
+                                alt="Способы оплаты" 
+                                className="h-8 w-auto" 
+                              />
+                            </div>
                           </>
                         ) : (
                           <>
