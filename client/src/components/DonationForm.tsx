@@ -149,8 +149,20 @@ const DonationForm = () => {
         // Payment successful, redirect to thank you page
         navigate(`/thank-you?amount=${form.getValues("amount")}`);
       } else if (data.status === "pending") {
-        // Redirect to YooMoney for payment
-        window.location.href = data.paymentUrl;
+        if (paymentMethod === "crypto" && data.cryptoAddress) {
+          // If crypto payment and we have an address, show it
+          toast({
+            title: "Оплата криптовалютой",
+            description: `Для завершения платежа отправьте необходимую сумму на адрес: ${data.cryptoAddress}`,
+          });
+          // Redirect to payment URL if provided by cryptobot
+          if (data.paymentUrl) {
+            window.open(data.paymentUrl, "_blank");
+          }
+        } else {
+          // Redirect to YooMoney for payment
+          window.location.href = data.paymentUrl;
+        }
       } else {
         // Payment failed
         toast({

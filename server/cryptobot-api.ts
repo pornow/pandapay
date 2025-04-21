@@ -104,6 +104,6 @@ export class CryptoBotAPI {
 
 // Create an instance with environment variables or defaults
 export const cryptoBotAPI = new CryptoBotAPI(
-  process.env.CRYPTO_BOT_API_KEY || "missing_api_key",
-  process.env.APP_RETURN_URL || "http://localhost:5000/thank-you"
+  process.env.CRYPTO_BOT_API_KEY || "",
+  process.env.RETURN_URL || "http://localhost:5000/thank-you"
 );

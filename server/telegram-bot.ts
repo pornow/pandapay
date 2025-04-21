@@ -10,11 +10,9 @@ export class TelegramBotService {
   constructor(token: string, options: TelegramBot.ConstructorOptions = {}) {
     if (!token) {
       console.warn('Telegram bot token not provided. Bot will not be initialized.');
-      // @ts-ignore: Create a dummy bot for type compatibility
-      this.bot = { 
-        on: () => {},
-        sendMessage: () => Promise.resolve({} as TelegramBot.Message)
-      };
+      // Create a dummy bot for type compatibility
+      this.bot = new TelegramBot(token || 'dummy', { polling: false });
+      // Don't need to override methods for a dummy bot
       return;
     }
 

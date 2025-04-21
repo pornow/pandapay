@@ -144,21 +144,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { paymentId } = req.params;
       
-      // Check payment status with YooMoney
-      const paymentResponse = await yooMoneyAPI.checkPaymentStatus(paymentId);
+      // Get donation to determine payment method
+      const donation = await storage.getDonationByPaymentId(paymentId);
       
-      if (paymentResponse.status === 'success') {
-        // If payment was successful, update our local status
-        const donation = await storage.getDonationByPaymentId(paymentId);
-        if (donation) {
-          await storage.updateDonationStatus(donation.id, "completed");
-        }
+      if (!donation) {
+        return res.status(404).json({ message: "Donation not found" });
+      }
+      
+      let paymentResponse;
+      
+      // Check status based on payment method
+      if (donation.paymentMethod === 'crypto') {
+        paymentResponse = await cryptoBotAPI.checkPaymentStatus(paymentId);
         
-        res.json({ status: "completed" });
-      } else if (paymentResponse.status === 'pending') {
-        res.json({ status: "pending" });
+        if (paymentResponse.status === 'completed') {
+          // If crypto payment was successful, update our local status
+          await storage.updateDonationStatus(donation.id, "completed");
+          res.json({ status: "completed" });
+        } else if (paymentResponse.status === 'pending') {
+          res.json({ 
+            status: "pending", 
+            paymentUrl: paymentResponse.paymentUrl,
+            cryptoAddress: donation.cryptoAddress
+          });
+        } else {
+          res.json({ status: "failed", error: paymentResponse.error });
+        }
       } else {
-        res.json({ status: "failed", error: paymentResponse.error });
+        // Default to YooMoney check
+        paymentResponse = await yooMoneyAPI.checkPaymentStatus(paymentId);
+        
+        if (paymentResponse.status === 'success') {
+          // If payment was successful, update our local status
+          await storage.updateDonationStatus(donation.id, "completed");
+          res.json({ status: "completed" });
+        } else if (paymentResponse.status === 'pending') {
+          res.json({ status: "pending", paymentUrl: paymentResponse.payment_url });
+        } else {
+          res.json({ status: "failed", error: paymentResponse.error });
+        }
       }
     } catch (error) {
       console.error("Error checking payment status:", error);
